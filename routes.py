@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from PyPDF2 import PdfReader
 from models import db, User, Book, Preference, Bookmark
+import os
+from google import genai
 
 api = Blueprint('api', __name__)
 
@@ -185,3 +187,33 @@ def add_bookmark():
 
     db.session.commit()
     return jsonify({'message': msg, 'bookmark_id': bookmark.id}), 200
+@api.route('/summarize', methods=['POST'])
+def summarize_text():
+    data = request.get_json()
+    text_to_summarize = data.get('text')
+
+    if not text_to_summarize:
+        return jsonify({'error': 'No text provided'}), 400
+
+    # It's best practice to keep API keys in environment variables
+    api_key = "AIzaSyBFXpOClKoFG2fv80ODwsix5bkrKt-EQyI"
+    if not api_key:
+        return jsonify({'error': 'Gemini API key not configured on server'}), 500
+
+    try:
+        # Initialize the Gemini client
+        client = genai.Client(api_key=api_key)
+        
+        # Create a prompt tailored for dyslexic readers
+        prompt = f"Please provide a clear, concise, and easy-to-understand summary of the following text. Use simple language suitable for a reader who may have dyslexia. Here is the text:\n\n{text_to_summarize}"
+        
+        # Call the Gemini 2.5 Flash model (it is extremely fast for this use case)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        
+        return jsonify({'summary': response.text}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

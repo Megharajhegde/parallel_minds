@@ -24,7 +24,7 @@ def import_local_pdfs(folder_name):
                 print(f"Processing: {filename}")
                 
                 try:
-                    # 1. Read the PDF file from the local hard drive
+                    # 1. Read the PDF file
                     reader = PdfReader(filepath)
                     extracted_text = ""
                     
@@ -37,27 +37,32 @@ def import_local_pdfs(folder_name):
                         print(f"  -> Skipping: Could not find readable text in {filename}")
                         continue
 
-                    # 2. Clean up the title (remove '.pdf' and replace underscores with spaces)
-                    clean_title = filename.replace('.pdf', '').replace('_', ' ')
+                    # --- THE FIXES ARE HERE ---
+                    # Clean the text: Encode to utf-8 and ignore/drop any corrupted surrogate characters
+                    clean_extracted_text = extracted_text.encode('utf-8', 'ignore').decode('utf-8')
 
-                    # 3. Save it to the database as a public book
+                    # Clean up the title
+                    clean_title = filename.replace('.pdf', '').replace('_', ' ').replace('-', ' ')
+
+                    # Save to database
                     new_book = Book(
                         title=clean_title,
-                        author="Unknown Author", # You can update these manually in the DB later
-                        content=extracted_text,
+                        author="Unknown Author",
+                        content=clean_extracted_text, # Use the sanitized text
                         source="public" 
                     )
                     
                     db.session.add(new_book)
+                    # Commit IMMEDIATELY inside the loop so one bad book doesn't crash the batch
+                    db.session.commit() 
                     print(f"  -> Success: Added '{clean_title}' to the library.")
 
                 except Exception as e:
+                    # If this specific book fails, rollback the error and keep going!
+                    db.session.rollback()
                     print(f"  -> Error processing {filename}: {str(e)}")
                     
-        # 4. Commit all the new books to the database at once
-        db.session.commit()
-        print("\nBatch import complete! All books are now in the database.")
+        print("\nBatch import complete!")
 
 if __name__ == '__main__':
-    # Pass the name of the folder you created in Step 1
     import_local_pdfs('seed_books')
