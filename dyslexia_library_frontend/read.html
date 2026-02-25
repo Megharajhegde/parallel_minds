@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-family: system-ui, sans-serif;
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --font-size: 18px;
+            --line-height: 1.6;
+            --letter-spacing: 0px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0; display: flex; height: 100vh;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.4s ease; /* Smooth transition for the toggle */
+        }
+
+        #sidebar {
+            width: 350px; background: #f8f9fa; padding: 25px; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05); overflow-y: auto; 
+            color: #333; font-family: system-ui, sans-serif; border-right: 1px solid #dee2e6;
+        }
+        .control-group { margin-bottom: 25px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .control-group label { display: block; font-weight: bold; margin-bottom: 12px; color: #495057; }
+        
+        button { 
+            width: 100%; padding: 12px; margin-bottom: 8px; 
+            border: none; border-radius: 5px; cursor: pointer; transition: background 0.2s;
+            font-weight: bold; font-size: 15px;
+        }
+        
+        .primary-btn { background: #007bff; color: white; }
+        .primary-btn:hover { background: #0056b3; }
+        .primary-btn:disabled { background: #6c757d; cursor: not-allowed; }
+
+        /* Special styling for the master toggle */
+        #mode-toggle-btn { background: #28a745; color: white; font-size: 16px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+        #mode-toggle-btn:hover { background: #218838; }
+        
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        #reader-container { flex-grow: 1; padding: 50px; overflow-y: auto; }
+        .back-btn { display: inline-block; margin-bottom: 30px; text-decoration: none; color: #007bff; font-weight: bold; font-family: system-ui, sans-serif; }
+        #content-wrapper { max-width: 800px; margin: 0 auto; }
+        #book-title { font-size: 2.5rem; margin-bottom: 5px; }
+        #book-author { color: #666; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        
+        #content { 
+            white-space: pre-wrap; font-size: var(--font-size);
+            line-height: var(--line-height); letter-spacing: var(--letter-spacing);
+        }
+
+        #summary-box {
+            margin-top: 15px; font-size: 14px; background: #e3f2fd; 
+            padding: 15px; border-radius: 5px; display: none; 
+            border-left: 4px solid #007bff; line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2 style="margin-top:0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Reading Tools</h2>
+        
+        <div class="control-group" style="background: #e9f7ef; border-color: #c3e6cb;">
+            <label style="text-align: center; font-size: 1.1rem; color: #155724;">Quick Setup</label>
+            <button id="mode-toggle-btn" onclick="toggleDyslexiaMode()">Enable Dyslexia Mode</button>
+        </div>
+
+        <div class="control-group">
+            <label>AI Assistant</label>
+            <p style="font-size: 13px; color: #666; margin-top: 0;">Highlight confusing text, then click below for a simple explanation.</p>
+            <button id="summarize-btn" class="primary-btn" onclick="summarizeHighlightedText()">Summarize Highlighted Text</button>
+            <div id="summary-box"></div>
+        </div>
+
+        <div class="control-group">
+            <label>Fine-tune Text Size (<span id="size-val">18</span>px)</label>
+            <input type="range" id="size-slider" min="14" max="36" value="18" oninput="changeSize(this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Fine-tune Line Spacing</label>
+            <input type="range" id="line-slider" min="1.2" max="3.0" step="0.1" value="1.6" oninput="changeLineHeight(this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Fine-tune Letter Spacing</label>
+            <input type="range" id="letter-slider" min="0" max="5" step="0.5" value="0" oninput="changeLetterSpacing(this.value)">
+        </div>
+    </div>
+
+    <div id="reader-container">
+        <div id="content-wrapper">
+            <a href="index.html" class="back-btn">← Back to Library</a>
+            <h1 id="book-title">Loading book...</h1>
+            <h3 id="book-author"></h3>
+            <div id="content">Loading content...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Master Toggle Logic ---
+        let isDyslexiaMode = false;
+
+        function toggleDyslexiaMode() {
+            isDyslexiaMode = !isDyslexiaMode;
+            const btn = document.getElementById('mode-toggle-btn');
+            
+            if (isDyslexiaMode) {
+                // Apply Dyslexia settings
+                document.documentElement.style.setProperty('--font-family', "'Lexend', sans-serif");
+                document.documentElement.style.setProperty('--bg-color', '#fdf5e6'); // Low-glare sepia
+                document.documentElement.style.setProperty('--line-height', '2.0');
+                document.documentElement.style.setProperty('--letter-spacing', '1.5px');
+                
+                // Update sliders to match the new variables visually
+                document.getElementById('line-slider').value = 2.0;
+                document.getElementById('letter-slider').value = 1.5;
+
+                // Change button appearance to show it's active
+                btn.innerText = "Switch to Normal Mode";
+                btn.style.background = "#6c757d"; // Gray out the button
+                btn.parentElement.style.background = "#f8f9fa";
+            } else {
+                // Revert to Normal settings
+                document.documentElement.style.setProperty('--font-family', "system-ui, sans-serif");
+                document.documentElement.style.setProperty('--bg-color', '#ffffff'); // White
+                document.documentElement.style.setProperty('--line-height', '1.6');
+                document.documentElement.style.setProperty('--letter-spacing', '0px');
+                
+                // Update sliders to match
+                document.getElementById('line-slider').value = 1.6;
+                document.getElementById('letter-slider').value = 0;
+
+                // Change button appearance back
+                btn.innerText = "Enable Dyslexia Mode";
+                btn.style.background = "#28a745"; // Green again
+                btn.parentElement.style.background = "#e9f7ef";
+            }
+        }
+
+        // --- 2. Fetch Book Content ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('id');
+
+        async function loadBookContent() {
+            if (!bookId) return;
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/api/books/${bookId}`);
+                const book = await response.json();
+                document.getElementById('book-title').innerText = book.title;
+                document.getElementById('book-author').innerText = `By: ${book.author}`;
+                let cleanText = book.content.replace(/\n{3,}/g, '\n\n');
+                document.getElementById('content').innerText = cleanText; 
+            } catch (error) {
+                document.getElementById('content').innerText = "Error loading book.";
+            }
+        }
+        loadBookContent();
+
+        // --- 3. Gemini AI Integration ---
+        async function summarizeHighlightedText() {
+            const summaryBox = document.getElementById('summary-box');
+            const btn = document.getElementById('summarize-btn');
+            const selectedText = window.getSelection().toString().trim();
+
+            if (!selectedText) {
+                alert("Please highlight a paragraph or sentence you want explained first!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Gemini is thinking...";
+            summaryBox.style.display = "block";
+            summaryBox.innerHTML = "<em>Analyzing text...</em>";
+            summaryBox.style.color = "#0056b3";
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: selectedText })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    summaryBox.innerHTML = `<strong>Simplified Explanation:</strong><br><br>${data.summary.replace(/\n/g, '<br>')}`;
+                    summaryBox.style.color = "#333";
+                } else {
+                    summaryBox.innerText = `Error: ${data.error}`;
+                    summaryBox.style.color = "red";
+                }
+            } catch (error) {
+                summaryBox.innerText = "Failed to connect to AI server. Check your Flask terminal.";
+                summaryBox.style.color = "red";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Summarize Highlighted Text";
+            }
+        }
+
+        // --- 4. Fine-Tuning Controls ---
+        function changeSize(size) { 
+            document.documentElement.style.setProperty('--font-size', size + 'px'); 
+            document.getElementById('size-val').innerText = size;
+        }
+        function changeLineHeight(height) { document.documentElement.style.setProperty('--line-height', height); }
+        function changeLetterSpacing(spacing) { document.documentElement.style.setProperty('--letter-spacing', spacing + 'px'); }
+    </script>
+</body>
+</html>

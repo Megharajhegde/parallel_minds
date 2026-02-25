@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyslexia-Friendly Library</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --bg-color: #f4f4f9;
+        }
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background-color: var(--bg-color); 
+            padding: 40px 20px; 
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 { 
+            color: #333; 
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        #book-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 25px; 
+        }
+        .book-card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            cursor: pointer; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            border-top: 5px solid var(--primary-color);
+        }
+        .book-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .book-title { 
+            font-size: 1.25rem; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            color: #222;
+        }
+        .book-author { 
+            color: #555; 
+            font-size: 0.95rem; 
+        }
+        .status-message {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>My Digital Library</h1>
+            <p class="subtitle">Accessible reading for everyone.</p>
+        </header>
+
+        <div id="book-grid">
+            <p class="status-message" id="loading-text">Loading books from the database...</p>
+        </div>
+    </div>
+
+    <script>
+        async function loadBooks() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/books');
+                const data = await response.json();
+                
+                const grid = document.getElementById('book-grid');
+                grid.innerHTML = ''; // Clear loading text
+
+                if (data.books.length === 0) {
+                    grid.innerHTML = '<p class="status-message">No books found. Run your batch import script first!</p>';
+                    return;
+                }
+
+                data.books.forEach(book => {
+                    const card = document.createElement('div');
+                    card.className = 'book-card';
+                    card.onclick = () => window.location.href = `read.html?id=${book.id}`;
+                    
+                    card.innerHTML = `
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">By: ${book.author}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                document.getElementById('book-grid').innerHTML = '<p class="status-message" style="color:red;">Error loading books. Make sure your Flask backend is running.</p>';
+            }
+        }
+
+        loadBooks();
+    </script>
+</body>
+</html>
