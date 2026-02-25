@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Book - Dyslexia Library</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; width: 100%; }
+        button:hover { background-color: #0056b3; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Upload Open-Source PDF</h2>
+    
+    <form id="uploadForm">
+        <div class="form-group">
+            <label for="userId">Your User ID:</label>
+            <input type="number" id="userId" value="1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="title">Book Title:</label>
+            <input type="text" id="title" placeholder="e.g., Biology 2e" required>
+        </div>
+
+        <div class="form-group">
+            <label for="author">Author:</label>
+            <input type="text" id="author" placeholder="e.g., OpenStax" required>
+        </div>
+
+        <div class="form-group">
+            <label for="pdfFile">Select PDF File:</label>
+            <input type="file" id="pdfFile" accept=".pdf" required>
+        </div>
+
+        <button type="submit">Upload Book</button>
+    </form>
+
+    <div id="status"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Prevent the page from refreshing
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = "Extracting text and uploading... please wait.";
+            statusDiv.style.color = "blue";
+
+            // 1. Gather the data from the form
+            const formData = new FormData();
+            formData.append('user_id', document.getElementById('userId').value);
+            formData.append('title', document.getElementById('title').value);
+            formData.append('author', document.getElementById('author').value);
+            formData.append('file', document.getElementById('pdfFile').files[0]);
+
+            try {
+                // 2. Send it to the Flask backend
+                const response = await fetch('http://127.0.0.1:5000/api/upload', {
+                    method: 'POST',
+                    body: formData // Note: When using FormData, do NOT set the 'Content-Type' header. The browser does it automatically.
+                });
+
+                const data = await response.json();
+
+                // 3. Handle the response
+                if (response.ok) {
+                    statusDiv.textContent = `Success! ${data.message} (Book ID: ${data.book_id})`;
+                    statusDiv.style.color = "green";
+                    document.getElementById('uploadForm').reset(); // Clear the form
+                } else {
+                    statusDiv.textContent = `Error: ${data.error}`;
+                    statusDiv.style.color = "red";
+                }
+            } catch (error) {
+                statusDiv.textContent = `Network Error: Could not connect to the server.`;
+                statusDiv.style.color = "red";
+            }
+        });
+    </script>
+
+</body>
+</html>
