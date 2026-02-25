@@ -1,1 +1,1 @@
-# parralelminds
+# PARALLEL_MINDS
