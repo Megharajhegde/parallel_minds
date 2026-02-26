@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading Mode</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500&display=swap" rel="stylesheet">
+    <title>ReadApt - Immersive Reader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --font-family: system-ui, sans-serif;
-            --bg-color: #ffffff;
+            --page-bg: #ffffff;
+            --canvas-bg: #f0f2f5;
             --text-color: #1a1a1a;
             --font-size: 18px;
             --line-height: 1.6;
@@ -20,85 +21,170 @@
         body {
             margin: 0; padding: 0; display: flex; height: 100vh;
             font-family: var(--font-family);
-            background-color: var(--bg-color);
+            background-color: var(--canvas-bg);
             color: var(--text-color);
-            transition: all 0.4s ease; /* Smooth transition for the toggle */
+            transition: all 0.4s ease;
         }
 
+        /* Sidebar Styling */
         #sidebar {
-            width: 350px; background: #f8f9fa; padding: 25px; 
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05); overflow-y: auto; 
-            color: #333; font-family: system-ui, sans-serif; border-right: 1px solid #dee2e6;
+            width: 350px; background: #f8f9fa; padding: 25px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05); overflow-y: auto;
+            color: #333; border-right: 1px solid #dee2e6; z-index: 100;
+            position: relative;
         }
+
         .control-group { margin-bottom: 25px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
         .control-group label { display: block; font-weight: bold; margin-bottom: 12px; color: #495057; }
-        
-        button { 
-            width: 100%; padding: 12px; margin-bottom: 8px; 
+
+        button {
+            width: 100%; padding: 12px; margin-bottom: 8px;
             border: none; border-radius: 5px; cursor: pointer; transition: background 0.2s;
             font-weight: bold; font-size: 15px;
         }
-        
+
         .primary-btn { background: #007bff; color: white; }
         .primary-btn:hover { background: #0056b3; }
-        .primary-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        #mode-toggle-btn { background: #28a745; color: white; }
 
-        /* Special styling for the master toggle */
-        #mode-toggle-btn { background: #28a745; color: white; font-size: 16px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
-        #mode-toggle-btn:hover { background: #218838; }
-        
         input[type="range"] { width: 100%; cursor: pointer; }
 
-        #reader-container { flex-grow: 1; padding: 50px; overflow-y: auto; }
-        .back-btn { display: inline-block; margin-bottom: 30px; text-decoration: none; color: #007bff; font-weight: bold; font-family: system-ui, sans-serif; }
-        #content-wrapper { max-width: 800px; margin: 0 auto; }
-        #book-title { font-size: 2.5rem; margin-bottom: 5px; }
-        #book-author { color: #666; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        
-        #content { 
-            white-space: pre-wrap; font-size: var(--font-size);
-            line-height: var(--line-height); letter-spacing: var(--letter-spacing);
+        /* Page Layout Styling */
+        #reader-container {
+            flex-grow: 1; padding: 40px; overflow-y: auto;
+            transition: background-color 0.4s ease; position: relative;
         }
 
-        #summary-box {
-            margin-top: 15px; font-size: 14px; background: #e3f2fd; 
-            padding: 15px; border-radius: 5px; display: none; 
-            border-left: 4px solid #007bff; line-height: 1.5;
+        #content-wrapper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--page-bg); padding: 60px 80px;
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.4s ease; position: relative; z-index: 10;
         }
+
+        /* Click-to-Speak Word Styling */
+        .word-span {
+            display: inline-block;
+            cursor: pointer;
+            transition: background-color 0.1s, color 0.1s;
+            border-radius: 3px;
+            padding: 0 1px;
+        }
+        .word-span:hover { background-color: rgba(0, 123, 255, 0.1); }
+        .word-span.speaking { background-color: #ffc107; color: #000; }
+
+        /* --- FEATURE 1: READING RULER --- */
+        #reading-ruler {
+            display: none;
+            position: fixed;
+            left: 350px; /* Offset by sidebar width */
+            width: calc(100% - 350px);
+            height: 140px;
+            background: rgba(0, 0, 0, 0.04);
+            border-top: 3px solid rgba(0, 123, 255, 0.3);
+            border-bottom: 3px solid rgba(0, 123, 255, 0.3);
+            pointer-events: none; /* Let clicks pass through to the text! */
+            z-index: 50;
+            transform: translateY(-50%);
+        }
+
+        /* Floating AI Pill Button */
+        #floating-summarize-btn {
+            display: none; position: absolute; z-index: 999;
+            background: #007bff; color: white; border: none;
+            padding: 8px 16px; border-radius: 20px; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer;
+            font-size: 13px; width: auto; min-width: 90px; white-space: nowrap;
+        }
+
+        /* AI Modal */
+        #ai-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;
+        }
+        #ai-modal {
+            background: var(--page-bg); color: var(--text-color);
+            padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.4);
+            font-family: var(--font-family); line-height: var(--line-height); letter-spacing: var(--letter-spacing);
+        }
+
+        .back-btn { display: inline-block; margin-bottom: 30px; text-decoration: none; color: #007bff; font-weight: bold; }
+        #book-title { font-size: 2.5rem; margin-bottom: 5px; margin-top: 0; }
+        #book-author { color: #666; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        #content { white-space: pre-wrap; font-size: var(--font-size); line-height: var(--line-height); letter-spacing: var(--letter-spacing); }
+        .modal-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+
+        /* --- PROGRESS BAR STYLES --- */
+        #progress-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+            background: rgba(0,0,0,0.05); z-index: 2000; pointer-events: none;
+        }
+        #progress-bar {
+            height: 100%; background: var(--success-color); width: 0%;
+            transition: width 0.2s ease-out; box-shadow: 0 0 8px rgba(40, 167, 69, 0.8);
+        }
+
+        /* --- IRLEN COLOR SWATCHES --- */
+        .color-swatches { display: flex; gap: 10px; margin-top: 10px; }
+        .swatch {
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            border: 2px solid rgba(0,0,0,0.1); transition: transform 0.2s;
+        }
+        .swatch:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
 
     <div id="sidebar">
         <h2 style="margin-top:0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Reading Tools</h2>
-        
-        <div class="control-group" style="background: #e9f7ef; border-color: #c3e6cb;">
-            <label style="text-align: center; font-size: 1.1rem; color: #155724;">Quick Setup</label>
-            <button id="mode-toggle-btn" onclick="toggleDyslexiaMode()">Enable Dyslexia Mode</button>
-        </div>
 
         <div class="control-group">
-            <label>AI Assistant</label>
-            <p style="font-size: 13px; color: #666; margin-top: 0;">Highlight confusing text, then click below for a simple explanation.</p>
-            <button id="summarize-btn" class="primary-btn" onclick="summarizeHighlightedText()">Summarize Highlighted Text</button>
-            <div id="summary-box"></div>
+            <button id="mode-toggle-btn" onclick="toggleDyslexiaMode()">Enable Dyslexia Theme</button>
+            <label style="margin-top: 15px;">Text Customization</label>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 12px; font-weight: normal;">Size (<span id="size-val-display">18</span>px)</label>
+                <input type="range" id="size-slider" min="14" max="36" value="18" oninput="changeSize(this.value)">
+            </div>
+            <div>
+                <label style="font-size: 12px; font-weight: normal;">Line Spacing</label>
+                <input type="range" id="line-slider" min="1.2" max="3.0" step="0.1" value="1.6" oninput="changeLineHeight(this.value)">
+            </div>
+            <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px;">
+                <label style="font-size: 12px; color: #666;">Page Tint (Visual Stress Relief)</label>
+                <div class="color-swatches">
+                    <div class="swatch" style="background: #ffffff;" onclick="setPageTint('#ffffff', '#f0f2f5')" title="Default White"></div>
+                    <div class="swatch" style="background: #fdf5e6;" onclick="setPageTint('#fdf5e6', '#e8e1d5')" title="Soft Yellow"></div>
+                    <div class="swatch" style="background: #e6f3ff;" onclick="setPageTint('#e6f3ff', '#d1e5f8')" title="Soft Blue"></div>
+                    <div class="swatch" style="background: #e6ffe6;" onclick="setPageTint('#e6ffe6', '#ccebce')" title="Soft Mint"></div>
+                    <div class="swatch" style="background: #ffebe6;" onclick="setPageTint('#ffebe6', '#f5d6ce')" title="Soft Peach"></div>
+                </div>
+            </div>
         </div>
 
-        <div class="control-group">
-            <label>Fine-tune Text Size (<span id="size-val">18</span>px)</label>
-            <input type="range" id="size-slider" min="14" max="36" value="18" oninput="changeSize(this.value)">
+        <div class="control-group" style="background: #e8f4f8; border-color: #bee5eb;">
+            <label style="color: #0c5460;">Cognitive Focus</label>
+            <button id="bionic-btn" onclick="toggleBionicReading()" style="background: #17a2b8; color: white;">🧠 Bionic Reading: OFF</button>
+            <button id="ruler-btn" onclick="toggleReadingRuler()" style="background: #6f42c1; color: white;">📏 Reading Ruler: OFF</button>
         </div>
 
-        <div class="control-group">
-            <label>Fine-tune Line Spacing</label>
-            <input type="range" id="line-slider" min="1.2" max="3.0" step="0.1" value="1.6" oninput="changeLineHeight(this.value)">
-        </div>
+        <div class="control-group" style="background: #fff9e6; border-color: #ffeeba;">
+            <label style="color: #856404;">Audio Assistance</label>
+            <button id="tts-play-btn" onclick="startFullTTS()" style="background: #ffc107; color: #333;">▶ Read Selection</button>
+            <button id="tts-stop-btn" onclick="stopTTS()" style="display: none; background: #dc3545; color: white;">■ Stop Audio</button>
 
-        <div class="control-group">
-            <label>Fine-tune Letter Spacing</label>
-            <input type="range" id="letter-slider" min="0" max="5" step="0.5" value="0" oninput="changeLetterSpacing(this.value)">
+            <div style="margin-top: 15px;">
+                <label style="font-size: 13px; font-weight: normal;">Speed: <span id="speed-val">0.9</span>x</label>
+                <input type="range" id="tts-speed" min="0.5" max="1.5" step="0.1" value="0.9" oninput="document.getElementById('speed-val').innerText = this.value">
+            </div>
+            <p style="font-size: 11px; color: #777; margin-top: 10px;">*Tip: Click a single word to hear it spoken.</p>
         </div>
     </div>
+
+    <div id="reading-ruler"></div>
 
     <div id="reader-container">
         <div id="content-wrapper">
@@ -109,51 +195,51 @@
         </div>
     </div>
 
+    <button id="floating-summarize-btn" onclick="triggerAiSummary()">✨ Summarize</button>
+
+    <div id="ai-modal-overlay">
+        <div id="ai-modal">
+            <h3 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.2rem;">✨ AI Explanation</h3>
+            <div id="ai-modal-content" style="margin-bottom: 20px; font-size: 0.95em;"></div>
+
+            <div class="modal-controls">
+                <button id="ai-tts-play-btn" onclick="playAiTTS()" style="background: #28a745; color: white; display: none;">🔊 Read Explanation</button>
+                <button id="ai-tts-stop-btn" onclick="stopAiTTS()" style="background: #dc3545; color: white; display: none;">■ Stop Audio</button>
+            </div>
+            <button onclick="closeAiModal()" style="background: #6c757d; color: white; margin-bottom: 0;">Close</button>
+        </div>
+    </div>
+
     <script>
-        // --- 1. Master Toggle Logic ---
+        const synth = window.speechSynthesis;
         let isDyslexiaMode = false;
-
-        function toggleDyslexiaMode() {
-            isDyslexiaMode = !isDyslexiaMode;
-            const btn = document.getElementById('mode-toggle-btn');
-            
-            if (isDyslexiaMode) {
-                // Apply Dyslexia settings
-                document.documentElement.style.setProperty('--font-family', "'Lexend', sans-serif");
-                document.documentElement.style.setProperty('--bg-color', '#fdf5e6'); // Low-glare sepia
-                document.documentElement.style.setProperty('--line-height', '2.0');
-                document.documentElement.style.setProperty('--letter-spacing', '1.5px');
-                
-                // Update sliders to match the new variables visually
-                document.getElementById('line-slider').value = 2.0;
-                document.getElementById('letter-slider').value = 1.5;
-
-                // Change button appearance to show it's active
-                btn.innerText = "Switch to Normal Mode";
-                btn.style.background = "#6c757d"; // Gray out the button
-                btn.parentElement.style.background = "#f8f9fa";
-            } else {
-                // Revert to Normal settings
-                document.documentElement.style.setProperty('--font-family', "system-ui, sans-serif");
-                document.documentElement.style.setProperty('--bg-color', '#ffffff'); // White
-                document.documentElement.style.setProperty('--line-height', '1.6');
-                document.documentElement.style.setProperty('--letter-spacing', '0px');
-                
-                // Update sliders to match
-                document.getElementById('line-slider').value = 1.6;
-                document.getElementById('letter-slider').value = 0;
-
-                // Change button appearance back
-                btn.innerText = "Enable Dyslexia Mode";
-                btn.style.background = "#28a745"; // Green again
-                btn.parentElement.style.background = "#e9f7ef";
-            }
-        }
-
-        // --- 2. Fetch Book Content ---
         const urlParams = new URLSearchParams(window.location.search);
         const bookId = urlParams.get('id');
 
+        // --- 1. Master Toggle ---
+        function toggleDyslexiaMode() {
+            isDyslexiaMode = !isDyslexiaMode;
+            const btn = document.getElementById('mode-toggle-btn');
+            if (isDyslexiaMode) {
+                document.documentElement.style.setProperty('--font-family', "'Lexend', sans-serif");
+                document.documentElement.style.setProperty('--page-bg', '#fdf5e6');
+                document.documentElement.style.setProperty('--canvas-bg', '#e8e1d5');
+                document.documentElement.style.setProperty('--line-height', '2.0');
+                document.documentElement.style.setProperty('--letter-spacing', '1.5px');
+                btn.innerText = "Revert to Normal Theme";
+                btn.style.background = "#6c757d";
+            } else {
+                document.documentElement.style.setProperty('--font-family', "system-ui, sans-serif");
+                document.documentElement.style.setProperty('--page-bg', '#ffffff');
+                document.documentElement.style.setProperty('--canvas-bg', '#f0f2f5');
+                document.documentElement.style.setProperty('--line-height', '1.6');
+                document.documentElement.style.setProperty('--letter-spacing', '0px');
+                btn.innerText = "Enable Dyslexia Theme";
+                btn.style.background = "#28a745";
+            }
+        }
+
+        // --- 2. Load Book & Wrap Words ---
         async function loadBookContent() {
             if (!bookId) return;
             try {
@@ -161,62 +247,262 @@
                 const book = await response.json();
                 document.getElementById('book-title').innerText = book.title;
                 document.getElementById('book-author').innerText = `By: ${book.author}`;
+
+                const contentDiv = document.getElementById('content');
                 let cleanText = book.content.replace(/\n{3,}/g, '\n\n');
-                document.getElementById('content').innerText = cleanText; 
+
+                contentDiv.innerHTML = cleanText.split(/(\s+)/).map(part => {
+                    if (part.trim().length === 0) return part;
+                    return `<span class="word-span" onclick="speakWord(this)">${part}</span>`;
+                }).join('');
+
             } catch (error) {
                 document.getElementById('content').innerText = "Error loading book.";
             }
         }
-        loadBookContent();
 
-        // --- 3. Gemini AI Integration ---
-        async function summarizeHighlightedText() {
-            const summaryBox = document.getElementById('summary-box');
-            const btn = document.getElementById('summarize-btn');
-            const selectedText = window.getSelection().toString().trim();
+        // --- FEATURE: Bionic Reading Mode ---
+        let isBionic = false;
+        function toggleBionicReading() {
+            isBionic = !isBionic;
+            const btn = document.getElementById('bionic-btn');
+            const spans = Array.from(document.querySelectorAll('.word-span'));
 
-            if (!selectedText) {
-                alert("Please highlight a paragraph or sentence you want explained first!");
-                return;
+            // Disable button while processing to prevent spam-clicking
+            btn.disabled = true;
+
+            if (isBionic) {
+                btn.innerText = "⏳ Processing...";
+                btn.style.background = "#138496";
+
+                setTimeout(() => {
+                    let index = 0;
+                    const chunkSize = 500; // Process 500 words at a time
+
+                    function processChunk() {
+                        const chunk = spans.slice(index, index + chunkSize);
+
+                        // If we are out of words, finish and re-enable button
+                        if (chunk.length === 0) {
+                            btn.innerText = "🧠 Bionic Reading: ON";
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        chunk.forEach(span => {
+                            if (!span.hasAttribute('data-word')) span.setAttribute('data-word', span.innerText);
+                            const word = span.getAttribute('data-word');
+                            if (word.length > 2) {
+                                const mid = Math.ceil(word.length / 2);
+                                span.innerHTML = `<b style="font-weight:900;">${word.substring(0, mid)}</b>${word.substring(mid)}`;
+                            } else if (word.length > 0) {
+                                span.innerHTML = `<b style="font-weight:900;">${word}</b>`;
+                            }
+                        });
+
+                        index += chunkSize;
+                        requestAnimationFrame(processChunk);
+                    }
+
+                    processChunk(); // Start the loop
+                }, 50);
+
+            } else {
+                btn.innerText = "⏳ Reverting...";
+                btn.style.background = "#17a2b8";
+
+                setTimeout(() => {
+                    let index = 0;
+                    const chunkSize = 500;
+
+                    function revertChunk() {
+                        const chunk = spans.slice(index, index + chunkSize);
+
+                        if (chunk.length === 0) {
+                            btn.innerText = "🧠 Bionic Reading: OFF";
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        chunk.forEach(span => {
+                            if (span.hasAttribute('data-word')) span.innerHTML = span.getAttribute('data-word');
+                        });
+
+                        index += chunkSize;
+                        requestAnimationFrame(revertChunk);
+                    }
+
+                    revertChunk();
+                }, 50);
+            }
+        }
+
+        // --- FEATURE: Reading Ruler ---
+        let isRulerOn = false;
+        function toggleReadingRuler() {
+            isRulerOn = !isRulerOn;
+            const ruler = document.getElementById('reading-ruler');
+            const btn = document.getElementById('ruler-btn');
+
+            if (isRulerOn) {
+                ruler.style.display = 'block';
+                btn.innerText = "📏 Reading Ruler: ON";
+                btn.style.background = "#5a32a3";
+            } else {
+                ruler.style.display = 'none';
+                btn.innerText = "📏 Reading Ruler: OFF";
+                btn.style.background = "#6f42c1";
+            }
+        }
+
+        // Make the ruler follow the mouse
+        document.addEventListener('mousemove', (e) => {
+            if (isRulerOn) {
+                document.getElementById('reading-ruler').style.top = e.clientY + 'px';
+            }
+        });
+
+        // --- Single Click-to-Speak ---
+        function speakWord(element) {
+            if (synth.speaking) synth.cancel();
+
+            document.querySelectorAll('.word-span').forEach(el => el.classList.remove('speaking'));
+            element.classList.add('speaking');
+
+            const utterance = new SpeechSynthesisUtterance(element.innerText);
+            utterance.rate = document.getElementById('tts-speed').value;
+
+            utterance.onend = () => { element.classList.remove('speaking'); };
+            synth.speak(utterance);
+        }
+
+        // --- Full Page TTS ---
+        function startFullTTS() {
+            synth.cancel();
+            let text = window.getSelection().toString().trim() || document.getElementById('content').innerText;
+            if (!text) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = document.getElementById('tts-speed').value;
+            document.getElementById('tts-play-btn').style.display = 'none';
+            document.getElementById('tts-stop-btn').style.display = 'block';
+            utterance.onend = stopTTS;
+            synth.speak(utterance);
+        }
+
+        function stopTTS() {
+            synth.cancel();
+            document.getElementById('tts-play-btn').style.display = 'block';
+            document.getElementById('tts-stop-btn').style.display = 'none';
+            document.querySelectorAll('.word-span').forEach(el => el.classList.remove('speaking'));
+        }
+
+        // --- AI Summarizer ---
+        document.addEventListener('mouseup', (e) => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            const btn = document.getElementById('floating-summarize-btn');
+            const readingArea = document.getElementById('content');
+            let isInsideReadingArea = false;
+
+            if (selection.rangeCount > 0) {
+                let container = selection.getRangeAt(0).commonAncestorContainer;
+                if (container.nodeType === 3) container = container.parentNode;
+                if (readingArea) isInsideReadingArea = readingArea.contains(container);
             }
 
-            btn.disabled = true;
-            btn.innerText = "Gemini is thinking...";
-            summaryBox.style.display = "block";
-            summaryBox.innerHTML = "<em>Analyzing text...</em>";
-            summaryBox.style.color = "#0056b3";
+            if (selectedText.length > 0 && isInsideReadingArea) {
+                btn.style.left = `${e.pageX + 5}px`;
+                btn.style.top = `${e.pageY - 40}px`;
+                btn.style.display = 'block';
+            } else if (e.target.id !== 'floating-summarize-btn') {
+                btn.style.display = 'none';
+            }
+        });
+
+        async function triggerAiSummary() {
+            const selection = window.getSelection().toString().trim();
+            document.getElementById('floating-summarize-btn').style.display = 'none';
+            const modal = document.getElementById('ai-modal-overlay');
+            const content = document.getElementById('ai-modal-content');
+
+            document.getElementById('ai-tts-play-btn').style.display = 'none';
+            document.getElementById('ai-tts-stop-btn').style.display = 'none';
+            modal.style.display = 'flex';
+            content.innerHTML = "<em>Analyzing text...</em>";
 
             try {
                 const response = await fetch('http://127.0.0.1:5000/api/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: selectedText })
+                    body: JSON.stringify({ text: selection })
                 });
                 const data = await response.json();
-
-                if (response.ok) {
-                    summaryBox.innerHTML = `<strong>Simplified Explanation:</strong><br><br>${data.summary.replace(/\n/g, '<br>')}`;
-                    summaryBox.style.color = "#333";
+                
+                if (data.error) {
+                    content.innerHTML = `<strong style="color: #dc3545;">Server Error:</strong> ${data.error}<br><br><small>Check your Python terminal for details!</small>`;
                 } else {
-                    summaryBox.innerText = `Error: ${data.error}`;
-                    summaryBox.style.color = "red";
+                    content.innerHTML = data.summary.replace(/\n/g, '<br>');
+                    document.getElementById('ai-tts-play-btn').style.display = 'block';
                 }
-            } catch (error) {
-                summaryBox.innerText = "Failed to connect to AI server. Check your Flask terminal.";
-                summaryBox.style.color = "red";
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Summarize Highlighted Text";
+            } catch (err) {
+                content.innerText = "Error connecting to AI server.";
             }
         }
 
-        // --- 4. Fine-Tuning Controls ---
-        function changeSize(size) { 
-            document.documentElement.style.setProperty('--font-size', size + 'px'); 
-            document.getElementById('size-val').innerText = size;
+        function playAiTTS() {
+            synth.cancel();
+            const textToRead = document.getElementById('ai-modal-content').innerText;
+            if (!textToRead) return;
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.rate = document.getElementById('tts-speed').value;
+            document.getElementById('ai-tts-play-btn').style.display = 'none';
+            document.getElementById('ai-tts-stop-btn').style.display = 'block';
+            utterance.onend = stopAiTTS;
+            synth.speak(utterance);
         }
-        function changeLineHeight(height) { document.documentElement.style.setProperty('--line-height', height); }
-        function changeLetterSpacing(spacing) { document.documentElement.style.setProperty('--letter-spacing', spacing + 'px'); }
+
+        function stopAiTTS() {
+            synth.cancel();
+            document.getElementById('ai-tts-play-btn').style.display = 'block';
+            document.getElementById('ai-tts-stop-btn').style.display = 'none';
+        }
+
+        function closeAiModal() {
+            synth.cancel();
+            stopAiTTS();
+            document.getElementById('ai-modal-overlay').style.display = 'none';
+            window.getSelection().removeAllRanges();
+        }
+
+        // --- Visual Settings ---
+        function changeSize(s) {
+            document.documentElement.style.setProperty('--font-size', s + 'px');
+            document.getElementById('size-val-display').innerText = s;
+        }
+        function changeLineHeight(h) { document.documentElement.style.setProperty('--line-height', h); }
+
+        function setPageTint(pageColor, canvasColor) {
+            document.documentElement.style.setProperty('--page-bg', pageColor);
+            document.documentElement.style.setProperty('--canvas-bg', canvasColor);
+
+            isDyslexiaMode = false;
+            const btn = document.getElementById('mode-toggle-btn');
+            btn.innerText = "Enable Dyslexia Theme";
+            btn.style.background = "#28a745";
+        }
+
+        // --- Progress Bar ---
+        const readerContainer = document.getElementById('reader-container');
+        readerContainer.addEventListener('scroll', () => {
+            const scrollTop = readerContainer.scrollTop;
+            const scrollHeight = readerContainer.scrollHeight - readerContainer.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+            document.getElementById('progress-bar').style.width = scrollPercentage + '%';
+        });
+
+        loadBookContent();
+        window.onbeforeunload = () => synth.cancel();
+        
     </script>
 </body>
 </html>

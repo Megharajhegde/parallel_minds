@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+
+<style>
+body {
+font-family: Arial;
+background: linear-gradient(135deg, #667eea, #764ba2);
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+
+.container {
+background: white;
+padding: 30px;
+border-radius: 10px;
+width: 350px;
+text-align: center;
+}
+
+input {
+width: 100%;
+padding: 10px;
+margin: 10px 0;
+}
+
+button {
+width: 100%;
+padding: 10px;
+background: blue;
+color: white;
+border: none;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Login</h2>
+
+{% if message %}
+<p style="color:red;">{{ message }}</p>
+{% endif %}
+
+<form action="/api/login-form" method="POST" autocomplete="on">
+
+<input 
+type="email" 
+name="email" 
+placeholder="Email" 
+autocomplete="email"
+required>
+
+<input 
+type="password" 
+name="password" 
+placeholder="Password" 
+autocomplete="current-password"
+required>
+
+<button type="submit">Login</button>
+
+</form>
+
+<a href="/api/register-page">Create Account</a>
+
+</div>
+
+</body>
+</html>

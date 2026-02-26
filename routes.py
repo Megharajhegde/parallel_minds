@@ -4,8 +4,89 @@ from PyPDF2 import PdfReader
 from models import db, User, Book, Preference, Bookmark
 import os
 from google import genai
+import os
+import pdfplumber
+from dotenv import load_dotenv
+load_dotenv()
 
 api = Blueprint('api', __name__)
+import os
+import tempfile
+import traceback
+import pdfplumber
+from flask import request, jsonify
+from models import db, Book
+
+@api.route('/upload', methods=['POST'])
+def upload_pdf():
+    # 1. Security Check
+    user_id = request.form.get('user_id')
+    if not user_id or user_id == "null":
+        return jsonify({'error': 'Authentication required to upload books.'}), 401
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part provided'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    clean_filename = file.filename.replace('.pdf', '').replace('_', ' ').replace('-', ' ')
+    title = request.form.get('title', clean_filename)
+    author = "Unknown Author" # Default fallback
+
+    if file and file.filename.endswith('.pdf'):
+        try:
+            extracted_text = ""
+            
+            # 2. Secure temporary physical file creation
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                file.save(temp_pdf.name)
+                temp_pdf_path = temp_pdf.name
+
+            try:
+                # 3. Open the REAL file with pdfplumber
+                with pdfplumber.open(temp_pdf_path) as pdf:
+                    
+                    # Grab Metadata if it exists
+                    if pdf.metadata:
+                        meta_author = pdf.metadata.get('Author')
+                        if meta_author and str(meta_author).strip():
+                            author = str(meta_author).strip()
+
+                    # Extract text safely (limited to 20 pages for speed in hackathon)
+                    max_pages = min(20, len(pdf.pages))
+                    for page in pdf.pages[:max_pages]:
+                        text = page.extract_text(x_tolerance=4.0, y_tolerance=3.0)
+                        if text:
+                            extracted_text += text + "\n"
+            finally:
+                # 4. ALWAYS delete the temp file when done to save server memory!
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+
+            if not extracted_text.strip():
+                return jsonify({'error': 'Could not extract text from PDF.'}), 400
+
+            # 5. Save to Database
+            new_book = Book(
+                title=title,
+                author=author,
+                content=extracted_text,
+                source="uploaded",
+                uploaded_by=user_id
+            )
+            db.session.add(new_book)
+            db.session.commit()
+
+            return jsonify({'message': 'Book uploaded successfully', 'book_id': new_book.id}), 201
+
+        except Exception as e:
+            # Print the exact error to the terminal so we can see it without crashing the server
+            traceback.print_exc() 
+            return jsonify({'error': 'Failed to process PDF on the server.'}), 500
+            
+    return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
 
 @api.route('/register', methods=['POST'])
 def register():
@@ -85,108 +166,8 @@ def get_book(id):
         'source': book.source
     }), 200
 
-@api.route('/upload', methods=['POST'])
-def upload_pdf():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part provided'}), 400
-        
-    file = request.files['file']
-    user_id = request.form.get('user_id')
-    title = request.form.get('title', 'Unknown Title')
-    author = request.form.get('author', 'Unknown Author')
 
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-        
-    if not user_id or not User.query.get(user_id):
-        return jsonify({'error': 'Valid user_id required'}), 400
 
-    if file and file.filename.endswith('.pdf'):
-        try:
-            # Extract text in-memory directly from the file stream
-            reader = PdfReader(file.stream)
-            extracted_text = ""
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    extracted_text += text + "\n"
-
-            if not extracted_text.strip():
-                return jsonify({'error': 'Could not extract text from PDF or PDF is empty'}), 400
-
-            new_book = Book(
-                title=title,
-                author=author,
-                content=extracted_text,
-                source="uploaded",
-                uploaded_by=user_id
-            )
-            db.session.add(new_book)
-            db.session.commit()
-
-            return jsonify({'message': 'Book uploaded and processed successfully', 'book_id': new_book.id}), 201
-
-        except Exception as e:
-            return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
-            
-    return jsonify({'error': 'Invalid file type. Only PDFs are allowed.'}), 400
-
-@api.route('/mode/<int:user_id>', methods=['PUT'])
-def update_mode(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    data = request.get_json()
-    new_mode = data.get('mode')
-    
-    if new_mode not in ['normal', 'dyslexia']:
-        return jsonify({'error': 'Invalid mode. Use normal or dyslexia'}), 400
-
-    user.mode = new_mode
-    db.session.commit()
-    return jsonify({'message': f'Reading mode updated to {new_mode}'}), 200
-
-@api.route('/preferences/<int:user_id>', methods=['PUT'])
-def update_preferences(user_id):
-    prefs = Preference.query.filter_by(user_id=user_id).first()
-    if not prefs:
-        return jsonify({'error': 'Preferences not found for this user'}), 404
-
-    data = request.get_json()
-    
-    # Update fields if provided
-    if 'font_size' in data: prefs.font_size = data['font_size']
-    if 'line_spacing' in data: prefs.line_spacing = data['line_spacing']
-    if 'letter_spacing' in data: prefs.letter_spacing = data['letter_spacing']
-    if 'background_color' in data: prefs.background_color = data['background_color']
-
-    db.session.commit()
-    return jsonify({'message': 'Preferences updated successfully'}), 200
-
-@api.route('/bookmark', methods=['POST'])
-def add_bookmark():
-    data = request.get_json()
-    if not data or not data.get('user_id') or not data.get('book_id') or 'position' not in data:
-        return jsonify({'error': 'Missing required fields'}), 400
-
-    # Check if bookmark already exists to update it, otherwise create new
-    bookmark = Bookmark.query.filter_by(user_id=data['user_id'], book_id=data['book_id']).first()
-    
-    if bookmark:
-        bookmark.position = data['position']
-        msg = 'Bookmark updated'
-    else:
-        bookmark = Bookmark(
-            user_id=data['user_id'],
-            book_id=data['book_id'],
-            position=data['position']
-        )
-        db.session.add(bookmark)
-        msg = 'Bookmark created'
-
-    db.session.commit()
-    return jsonify({'message': msg, 'bookmark_id': bookmark.id}), 200
 @api.route('/summarize', methods=['POST'])
 def summarize_text():
     data = request.get_json()
@@ -196,7 +177,9 @@ def summarize_text():
         return jsonify({'error': 'No text provided'}), 400
 
     # It's best practice to keep API keys in environment variables
-    api_key = "AIzaSyBFXpOClKoFG2fv80ODwsix5bkrKt-EQyI"
+    
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    api_key =GEMINI_API_KEY
     if not api_key:
         return jsonify({'error': 'Gemini API key not configured on server'}), 500
 

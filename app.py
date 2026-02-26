@@ -4,6 +4,7 @@ from config import Config
 from models import db
 from routes import api
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)

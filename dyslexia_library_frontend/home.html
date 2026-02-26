@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadApt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+    --cream:      #f2ede4;
+    --cream-dark: #e8e0d0;
+    --cream-card: #ede6d8;
+    --black:      #1a0f0a;
+    --ink:        #2e1a10;
+    --muted:      rgba(46,26,16,0.55);
+    --burnt:      rgb(177,56,15);
+    --burnt-soft: rgba(177,56,15,0.12);
+    --burnt-mid:  rgba(177,56,15,0.3);
+    --orange:     rgb(219,133,13);
+    --pink:       #fc03ca;
+    --white:      #faf7f2;
+}
+
+* { padding: 0; margin: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+    background-color: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    position: relative;
+}
+
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.card.reveal.visible:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 16px 48px rgba(177,56,15,0.2);
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes scrollLine {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50%       { opacity: 1;   transform: scaleY(1.4); }
+}
+
+.navbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 60px;
+    z-index: 10;
+}
+.nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--burnt);
+    letter-spacing: 2px;
+}
+.nav-links { display: flex; gap: 40px; }
+.nav-links a {
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    position: relative;
+    transition: color 0.3s ease;
+}
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1.5px;
+    background: var(--burnt);
+    transition: width 0.3s ease;
+}
+.nav-links a:hover { color: var(--burnt); }
+.nav-links a:hover::after { width: 100%; }
+
+/* ── HERO ── */
+#hero {
+    height: 100vh;
+    background-color: var(--cream);
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 0 60px;
+    overflow: hidden;
+}
+#hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("library.jpeg") no-repeat center center/cover;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+#hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, transparent 40%, rgba(242,237,228,0.7) 100%);
+    z-index: 0;
+}
+.hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+.hero-left { max-width: 560px; }
+
+.hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--burnt);
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s both;
+}
+.hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 112px;
+    font-weight: 900;
+    line-height: 0.9;
+    color: var(--burnt);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s both;
+    letter-spacing: -2px;
+}
+.hero-apt {
+    -webkit-text-stroke: 2.5px var(--burnt);
+    -webkit-text-fill-color: transparent;
+}
+.hero-statement {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--ink);
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.35s both;
+}
+.hero-statement em {
+    font-style: italic;
+    color: var(--burnt);
+}
+.hero-intro {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.75;
+    font-weight: 300;
+    max-width: 420px;
+    margin-bottom: 40px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.5s both;
+}
+.hero-cta {
+    display: inline-block;
+    text-decoration: none;
+    background-color: var(--burnt);
+    color: var(--white);
+    padding: 15px 36px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: background 0.3s ease, transform 0.2s ease;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.65s both;
+}
+.hero-cta:hover {
+    background-color: var(--orange);
+    transform: translateY(-2px);
+}
+
+/* hero right badges */
+.hero-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    opacity: 0;
+    animation: fadeIn 1s ease 0.8s both;
+}
+.hero-badge {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--burnt-mid);
+    border-left: 3px solid var(--burnt);
+    border-radius: 8px;
+    padding: 18px 24px;
+    width: 220px;
+    backdrop-filter: blur(4px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hero-badge:hover {
+    transform: translateX(6px);
+    box-shadow: -4px 0 20px rgba(177,56,15,0.15);
+}
+.badge-number {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 900;
+    color: var(--burnt);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.badge-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+}
+.hero-scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0;
+    animation: fadeIn 1s ease 1.2s both;
+    z-index: 1;
+}
+.hero-scroll-hint::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 30px;
+    background: var(--burnt);
+    margin: 8px auto 0;
+    animation: scrollLine 1.5s ease-in-out infinite;
+}
+
+#cards {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--cream-dark);
+    gap: 20px;
+    padding: 80px 40px;
+    border-top: 1px solid var(--burnt-mid);
+}
+#cards h2 {
+    color: var(--ink);
+    font-size: 36px;
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 40px;
+}
+.cards-container {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.card {
+    background-color: var(--white);
+    border: 1px solid rgba(177,56,15,0.15);
+    padding: 32px;
+    border-radius: 12px;
+    width: 260px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+.card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: var(--burnt);
+}
+.card p {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.7;
+}
+.card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 16px 48px rgba(177,56,15,0.18);
+}
+#contact {
+    min-height: 100vh;
+    background-color: var(--cream);
+    border-top: 1px solid var(--burnt-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    position: relative;
+    overflow: hidden;
+}
+#contact::before {
+    content: "";
+    position: absolute;
+    top: -120px; left: -120px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(177,56,15,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+#contact::after {
+    content: "";
+    position: absolute;
+    bottom: -100px; right: -100px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(219,133,13,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.contact-inner {
+    display: flex;
+    gap: 80px;
+    align-items: center;
+    max-width: 960px;
+    width: 100%;
+    z-index: 1;
+}
+.contact-left { flex: 1; color: var(--ink); }
+
+.contact-tag {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--burnt);
+    border: 1px solid var(--burnt-mid);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+}
+.contact-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 52px;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.15;
+    margin-bottom: 20px;
+}
+.contact-heading em {
+    color: var(--burnt);
+    font-style: italic;
+}
+.contact-sub {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 340px;
+}
+.contact-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: var(--white);
+    border: 1px solid rgba(177,56,15,0.15);
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 8px 40px rgba(177,56,15,0.07);
+}
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-group label {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+.optional-label { opacity: 0.5; font-size: 12px; }
+.form-group input,
+.form-group textarea {
+    background: var(--cream);
+    border: 1px solid rgba(177,56,15,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--ink);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.3s ease, background 0.3s ease;
+    outline: none;
+    resize: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder { color: var(--muted); opacity: 0.5; }
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: var(--burnt);
+    background: rgba(177,56,15,0.04);
+}
+.contact-btn {
+    background: var(--burnt);
+    color: var(--white);
+    border: none;
+    padding: 14px 32px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background 0.2s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+}
+.contact-btn:hover { background: var(--orange); transform: translateY(-2px); }
+.contact-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.form-success {
+    display: none;
+    color: var(--burnt);
+    font-size: 14px;
+    text-align: center;
+    padding: 12px;
+    background: var(--burnt-soft);
+    border-radius: 8px;
+    border: 1px solid var(--burnt-mid);
+}
+@media (max-width: 900px) {
+    .hero-content { flex-direction: column; align-items: flex-start; gap: 40px; padding-top: 100px; }
+    .hero-title { font-size: 80px; }
+    .hero-right { flex-direction: row; flex-wrap: wrap; }
+    .hero-badge { width: auto; min-width: 160px; }
+    .contact-inner { flex-direction: column; gap: 40px; }
+    .contact-heading { font-size: 36px; }
+    .cards-container { flex-direction: column; align-items: center; }
+    .navbar { padding: 24px 32px; }
+    #hero { padding: 0 32px; }
+}
+</style>
+<body>
+
+<!-- HERO -->
+<section id="hero">
+    <nav class="navbar">
+        <span class="nav-logo"></span>
+        <div class="nav-links">
+            <a href="#cards">About</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </nav>
+
+    <div class="hero-content">
+        <div class="hero-left">
+            <div class="hero-eyebrow">Assistive Reading Platform</div>
+            <h1 class="hero-title">Read<span class="hero-apt">Apt</span></h1>
+            <p class="hero-statement">Every mind<br>deserves to <em>read freely.</em></p>
+            <p class="hero-intro">One seamless digital solution for every kind of reader — dyslexic, visual, auditory, or somewhere in between.</p>
+            <a href="index.html" class="hero-cta">Explore how it works</a>
+        </div>
+        <div class="hero-right">
+            <div class="hero-badge">
+                <span class="badge-number">3M+</span>
+                <span class="badge-label">Students with undiagnosed dyslexia</span>
+            </div>
+            <div class="hero-badge" style="animation-delay: 0.2s">
+                <span class="badge-number">1 in 5</span>
+                <span class="badge-label">People are affected by reading differences</span>
+            </div>
+            <div class="hero-badge" style="animation-delay: 0.4s">
+                <span class="badge-number">AI</span>
+                <span class="badge-label">Powered adaptive rephrasing engine</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-scroll-hint">scroll down</div>
+</section>
+
+<!-- ABOUT / CARDS -->
+<section id="cards">
+    <h2 id="about">About us</h2>
+    <div class="cards-container">
+        <div class="card reveal">
+            <h3>What is Dyslexia?</h3>
+            <p>Dyslexia is a learning difference that affects how people read and process text. It has nothing to do with intelligence — yet it goes undiagnosed and unsupported in millions of students worldwide.</p>
+        </div>
+        <div class="card reveal" style="transition-delay: 0.15s">
+            <h3>The Silence Around It</h3>
+            <p>Most people with dyslexia never openly talk about it. The fear of being judged, labelled as slow, or dismissed by teachers pushes them to struggle alone — silently falling behind in academics.</p>
+        </div>
+        <div class="card reveal" style="transition-delay: 0.3s">
+            <h3>What Readapt Does</h3>
+            <p>Readapt adapts educational content to the reader — not the other way around. With AI-powered rephrasing, customizable reading environments, and assistive tools, reading finally feels possible.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+    <div class="contact-inner">
+        <div class="contact-left reveal">
+            <span class="contact-tag">Get in touch</span>
+            <h2 class="contact-heading">Let's talk<br><em>shall we?</em></h2>
+            <p class="contact-sub">Whether you're a student, educator, or parent — we'd love to hear from you. Drop your details and we'll reach out soon.</p>
+        </div>
+        <form class="contact-form reveal" style="transition-delay: 0.15s" onsubmit="handleContact(event)">
+            <div class="form-group">
+                <label for="contact-name">Full Name</label>
+                <input type="text" id="contact-name" name="name" placeholder="Jane Doe" required>
+            </div>
+            <div class="form-group">
+                <label for="contact-email">Email Address</label>
+                <input type="email" id="contact-email" name="email" placeholder="jane@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="contact-msg">Message <span class="optional-label">(optional)</span></label>
+                <textarea id="contact-msg" name="message" placeholder="Tell us a bit about yourself..." rows="4"></textarea>
+            </div>
+            <button type="submit" class="contact-btn" id="contactSubmit">Send Message</button>
+            <p class="form-success" id="formSuccess">We got your message! We will be in touch soon.</p>
+        </form>
+    </div>
+</section>
+<script>
+    // Intersection Observer for .reveal elements
+    document.addEventListener('DOMContentLoaded', function () {
+        const reveals = document.querySelectorAll('.reveal');
+
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        reveals.forEach(function (el) {
+            observer.observe(el);
+        });
+    });
+
+    // Contact form handler
+    function handleContact(e) {
+        e.preventDefault();
+        const btn = document.getElementById('contactSubmit');
+        const success = document.getElementById('formSuccess');
+        btn.textContent = 'Sending...';
+        btn.disabled = true;
+        setTimeout(() => {
+            btn.style.display = 'none';
+            success.style.display = 'block';
+        }, 1000);
+    }
+</script>
+
+</body>
+</html>
