@@ -14,6 +14,7 @@
             --font-size: 18px;
             --line-height: 1.6;
             --letter-spacing: 0px;
+            --word-spacing: 0px; /* NEW: Added word spacing variable */
         }
 
         * { box-sizing: border-box; }
@@ -112,17 +113,24 @@
         .back-btn { display: inline-block; margin-bottom: 30px; text-decoration: none; color: #007bff; font-weight: bold; }
         #book-title { font-size: 2.5rem; margin-bottom: 5px; margin-top: 0; }
         #book-author { color: #666; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        #content { white-space: pre-wrap; font-size: var(--font-size); line-height: var(--line-height); letter-spacing: var(--letter-spacing); }
+        
+        /* UPDATED: Content now uses the word-spacing CSS variable */
+        #content { white-space: pre-wrap; font-size: var(--font-size); line-height: var(--line-height); letter-spacing: var(--letter-spacing); word-spacing: var(--word-spacing); }
+        
         .modal-controls { display: flex; gap: 10px; margin-bottom: 15px; }
 
         /* --- PROGRESS BAR STYLES --- */
         #progress-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 6px;
-            background: rgba(0,0,0,0.05); z-index: 2000; pointer-events: none;
+            position: fixed; top: 0; left: 0; width: 100%; 
+            height: 12px; /* CHANGED: Increased from 6px to 12px to make it thicker */
+            background: rgba(0,0,0,0.1); /* Made the background track slightly darker */
+            z-index: 2000; pointer-events: none;
         }
         #progress-bar {
             height: 100%; background: var(--success-color); width: 0%;
-            transition: width 0.2s ease-out; box-shadow: 0 0 8px rgba(40, 167, 69, 0.8);
+            transition: width 0.2s ease-out; 
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.9); /* Made the glow slightly stronger */
+            border-bottom-right-radius: 4px; /* Added a nice rounded edge to the bar */
         }
 
         /* --- IRLEN COLOR SWATCHES --- */
@@ -149,10 +157,17 @@
                 <label style="font-size: 12px; font-weight: normal;">Size (<span id="size-val-display">18</span>px)</label>
                 <input type="range" id="size-slider" min="14" max="36" value="18" oninput="changeSize(this.value)">
             </div>
-            <div>
+            
+            <div style="margin-bottom: 15px;">
                 <label style="font-size: 12px; font-weight: normal;">Line Spacing</label>
                 <input type="range" id="line-slider" min="1.2" max="3.0" step="0.1" value="1.6" oninput="changeLineHeight(this.value)">
             </div>
+
+            <div>
+                <label style="font-size: 12px; font-weight: normal;">Word Spacing (<span id="word-val-display">0</span>px)</label>
+                <input type="range" id="word-slider" min="0" max="20" step="1" value="0" oninput="changeWordSpacing(this.value)">
+            </div>
+
             <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px;">
                 <label style="font-size: 12px; color: #666;">Page Tint (Visual Stress Relief)</label>
                 <div class="color-swatches">
@@ -226,6 +241,7 @@
                 document.documentElement.style.setProperty('--canvas-bg', '#e8e1d5');
                 document.documentElement.style.setProperty('--line-height', '2.0');
                 document.documentElement.style.setProperty('--letter-spacing', '1.5px');
+                document.documentElement.style.setProperty('--word-spacing', '6px'); // Auto-add word spacing for Dyslexia Mode
                 btn.innerText = "Revert to Normal Theme";
                 btn.style.background = "#6c757d";
             } else {
@@ -234,6 +250,7 @@
                 document.documentElement.style.setProperty('--canvas-bg', '#f0f2f5');
                 document.documentElement.style.setProperty('--line-height', '1.6');
                 document.documentElement.style.setProperty('--letter-spacing', '0px');
+                document.documentElement.style.setProperty('--word-spacing', document.getElementById('word-slider').value + 'px'); // Revert to slider value
                 btn.innerText = "Enable Dyslexia Theme";
                 btn.style.background = "#28a745";
             }
@@ -261,80 +278,49 @@
             }
         }
 
-        // --- FEATURE: Bionic Reading Mode ---
+        // --- FEATURE: Bionic Reading Mode (BLAZING FAST CLONE) ---
         let isBionic = false;
         function toggleBionicReading() {
             isBionic = !isBionic;
             const btn = document.getElementById('bionic-btn');
-            const spans = Array.from(document.querySelectorAll('.word-span'));
+            const oldContent = document.getElementById('content');
 
-            // Disable button while processing to prevent spam-clicking
             btn.disabled = true;
+            btn.innerText = "⏳ Processing...";
 
-            if (isBionic) {
-                btn.innerText = "⏳ Processing...";
-                btn.style.background = "#138496";
+            // Short timeout to let the browser update the button text visually first
+            setTimeout(() => {
+                // Clone the entire content node perfectly in memory
+                const newContent = oldContent.cloneNode(true);
+                const spans = newContent.getElementsByClassName('word-span');
 
-                setTimeout(() => {
-                    let index = 0;
-                    const chunkSize = 500; // Process 500 words at a time
-
-                    function processChunk() {
-                        const chunk = spans.slice(index, index + chunkSize);
-
-                        // If we are out of words, finish and re-enable button
-                        if (chunk.length === 0) {
-                            btn.innerText = "🧠 Bionic Reading: ON";
-                            btn.disabled = false;
-                            return;
+                if (isBionic) {
+                    for (let i = 0; i < spans.length; i++) {
+                        const span = spans[i];
+                        if (!span.hasAttribute('data-word')) span.setAttribute('data-word', span.innerText);
+                        const word = span.getAttribute('data-word');
+                        if (word.length > 2) {
+                            const mid = Math.ceil(word.length / 2);
+                            span.innerHTML = `<b style="font-weight:900;">${word.substring(0, mid)}</b>${word.substring(mid)}`;
+                        } else if (word.length > 0) {
+                            span.innerHTML = `<b style="font-weight:900;">${word}</b>`;
                         }
-
-                        chunk.forEach(span => {
-                            if (!span.hasAttribute('data-word')) span.setAttribute('data-word', span.innerText);
-                            const word = span.getAttribute('data-word');
-                            if (word.length > 2) {
-                                const mid = Math.ceil(word.length / 2);
-                                span.innerHTML = `<b style="font-weight:900;">${word.substring(0, mid)}</b>${word.substring(mid)}`;
-                            } else if (word.length > 0) {
-                                span.innerHTML = `<b style="font-weight:900;">${word}</b>`;
-                            }
-                        });
-
-                        index += chunkSize;
-                        requestAnimationFrame(processChunk);
                     }
-
-                    processChunk(); // Start the loop
-                }, 50);
-
-            } else {
-                btn.innerText = "⏳ Reverting...";
-                btn.style.background = "#17a2b8";
-
-                setTimeout(() => {
-                    let index = 0;
-                    const chunkSize = 500;
-
-                    function revertChunk() {
-                        const chunk = spans.slice(index, index + chunkSize);
-
-                        if (chunk.length === 0) {
-                            btn.innerText = "🧠 Bionic Reading: OFF";
-                            btn.disabled = false;
-                            return;
-                        }
-
-                        chunk.forEach(span => {
-                            if (span.hasAttribute('data-word')) span.innerHTML = span.getAttribute('data-word');
-                        });
-
-                        index += chunkSize;
-                        requestAnimationFrame(revertChunk);
+                    btn.innerText = "🧠 Bionic Reading: ON";
+                    btn.style.background = "#5a32a3"; // Nice deep purple when active
+                } else {
+                    for (let i = 0; i < spans.length; i++) {
+                        const span = spans[i];
+                        if (span.hasAttribute('data-word')) span.innerHTML = span.getAttribute('data-word');
                     }
+                    btn.innerText = "🧠 Bionic Reading: OFF";
+                    btn.style.background = "#17a2b8";
+                }
 
-                    revertChunk();
-                }, 50);
-            }
+                // Swap the old DOM tree with the new highly optimized one instantly
+                oldContent.parentNode.replaceChild(newContent, oldContent);
+                btn.disabled = false;
+            }, 10);
         }
 
         // --- FEATURE: Reading Ruler ---
@@ -407,7 +393,9 @@
             if (selection.rangeCount > 0) {
                 let container = selection.getRangeAt(0).commonAncestorContainer;
                 if (container.nodeType === 3) container = container.parentNode;
-                if (readingArea) isInsideReadingArea = readingArea.contains(container);
+                // Important: we need to find the dynamic #content element because Bionic Reading clones it
+                const currentReadingArea = document.getElementById('content');
+                if (currentReadingArea) isInsideReadingArea = currentReadingArea.contains(container);
             }
 
             if (selectedText.length > 0 && isInsideReadingArea) {
@@ -480,6 +468,12 @@
             document.getElementById('size-val-display').innerText = s;
         }
         function changeLineHeight(h) { document.documentElement.style.setProperty('--line-height', h); }
+        
+        // NEW: Word Spacing Change Function
+        function changeWordSpacing(w) { 
+            document.documentElement.style.setProperty('--word-spacing', w + 'px'); 
+            document.getElementById('word-val-display').innerText = w;
+        }
 
         function setPageTint(pageColor, canvasColor) {
             document.documentElement.style.setProperty('--page-bg', pageColor);
